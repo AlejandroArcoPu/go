@@ -8,10 +8,9 @@ Simple CLI app to track your tasks and manage your to-do list. Inspired by [proj
 - Priorities.
 - Mark a task in-progress or done.
 - Done tasks are saved in an archived file.
-- Export tasks.
 - List all tasks.
 - List tasks by status.
-- Colors and emojis.
+- Emojis.
 - Go standard libraries, no external dependencies.
 - Your tasks, your law. Your tasks are stored locally.
 

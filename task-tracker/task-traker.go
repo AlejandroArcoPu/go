@@ -53,6 +53,19 @@ func isStatus(status string) bool {
 	return statusName[0] == status || statusName[1] == status || statusName[2] == status
 }
 
+func getStatus(status string) (TaskStatus, error) {
+	switch status {
+	case statusName[0]:
+		return 0, nil
+	case statusName[1]:
+		return 1, nil
+	case statusName[2]:
+		return 2, nil
+	default:
+		return 0, fmt.Errorf("invalid status (todo, in-progress, done)")
+	}
+}
+
 func (t Task) String() string {
 	return fmt.Sprintf("\n{ ID: %v; Description: %v, Status: %v, CreatedAt: %v, UpdatedAt: %v }\n", t.ID, t.Description, fmt.Sprintf("%v", t.Status), t.CreatedAt, t.UpdatedAt)
 }
@@ -63,6 +76,12 @@ func (ts TaskStatus) String() string {
 
 func (t *Task) UpdateDescription(description string) {
 	t.Description = description
+	t.UpdatedAt = time.Now()
+}
+
+func (t *Task) UpdateStatus(status TaskStatus) {
+	t.Status = status
+	t.UpdatedAt = time.Now()
 }
 
 func removeIndex(tasks []Task, index int) []Task {
@@ -163,12 +182,21 @@ func listTasks() error {
 	return err
 }
 
-func listTasksBy(status string) error {
+func listTasksBy(status TaskStatus) error {
 	fmt.Printf("🗒️ Listing tasks by %s", status)
+	tasks, err := getTasks()
+	if err != nil {
+		return fmt.Errorf("reading existing tasks: %w", err)
+	}
+	for _, t := range tasks {
+		if t.Status == status {
+			fmt.Println(t)
+		}
+	}
 	return nil
 }
 
-func updateTask(id int, description string) error {
+func updateTaskDescription(id int, description string) error {
 	fmt.Println("🔄 Updating task")
 	tasks, err := getTasks()
 	if err != nil {
@@ -179,6 +207,33 @@ func updateTask(id int, description string) error {
 	for i, t := range tasks {
 		if t.ID == id {
 			tasks[i].UpdateDescription(description)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("task %d not found", id)
+	}
+
+	if err = writeTasks(tasks); err != nil {
+		return fmt.Errorf("writing tasks %w", err)
+	}
+	fmt.Printf("✅ Task updated succesfully (ID: %d)", id)
+	return nil
+}
+
+func updateTaskStatus(id int, status TaskStatus) error {
+	fmt.Println("🔄 Updating task")
+	tasks, err := getTasks()
+	if err != nil {
+		return fmt.Errorf("reading existing tasks: %w", err)
+	}
+	found := false
+
+	for i, t := range tasks {
+		if t.ID == id {
+			tasks[i].UpdateStatus(status)
 			found = true
 			break
 		}
@@ -206,11 +261,14 @@ func executeCommand(command string, args []string) error {
 				return fmt.Errorf("😭 List command has failed: %w", err)
 			}
 		} else {
-			status := args[0]
-			if !isStatus(status) {
-				return fmt.Errorf("😭 List command has failed: %s is not a valid status (todo, in-progress, done)", status)
+			if !isStatus(args[0]) {
+				return fmt.Errorf("😭 List command has failed: %s is not a valid status (todo, in-progress, done)", args[0])
 			}
-			if err := listTasksBy(status); err != nil {
+			status, err := getStatus(args[0])
+			if err != nil {
+				return fmt.Errorf("😭 List command has failed: %s is not a valid status (todo, in-progress, done)", args[0])
+			}
+			if err = listTasksBy(status); err != nil {
 				return fmt.Errorf("😭 List command has failed: %w", err)
 			}
 		}
@@ -230,7 +288,7 @@ func executeCommand(command string, args []string) error {
 		}
 		id, _ := strconv.Atoi(args[0])
 		description := args[1]
-		if err := updateTask(id, description); err != nil {
+		if err := updateTaskDescription(id, description); err != nil {
 			return fmt.Errorf("😭 Add command has failed: %w", err)
 		}
 		return nil
@@ -241,6 +299,24 @@ func executeCommand(command string, args []string) error {
 		id, _ := strconv.Atoi(args[0])
 		if err := deleteTask(id); err != nil {
 			return fmt.Errorf("😭 Delete command has failed: %w", err)
+		}
+		return nil
+	case "mark-in-progress":
+		if len(args) != 1 {
+			return fmt.Errorf("❌ Invalid quantity of arguments: %d\nmark-in-progress needs an id\n", len(args))
+		}
+		id, _ := strconv.Atoi(args[0])
+		if err := updateTaskStatus(id, 1); err != nil {
+			return fmt.Errorf("😭 mark-in-progress command has failed: %w", err)
+		}
+		return nil
+	case "mark-done":
+		if len(args) != 1 {
+			return fmt.Errorf("❌ Invalid quantity of arguments: %d\nmark-done needs an id\n", len(args))
+		}
+		id, _ := strconv.Atoi(args[0])
+		if err := updateTaskStatus(id, 2); err != nil {
+			return fmt.Errorf("😭 mark-done command has failed: %w", err)
 		}
 		return nil
 	default:
