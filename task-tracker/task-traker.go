@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -24,7 +25,11 @@ var statusName = map[TaskStatus]string{
 	Done:        "done",
 }
 
-var path = filepath.Join(os.TempDir(), "tasks.json")
+var statusKey = map[string]TaskStatus{
+	"todo":        Todo,
+	"in-progress": In_Progress,
+	"done":        Done,
+}
 
 var (
 	usage = `
@@ -50,20 +55,13 @@ type Task struct {
 }
 
 func isStatus(status string) bool {
-	return statusName[0] == status || statusName[1] == status || statusName[2] == status
-}
-
-func getStatus(status string) (TaskStatus, error) {
-	switch status {
-	case statusName[0]:
-		return 0, nil
-	case statusName[1]:
-		return 1, nil
-	case statusName[2]:
-		return 2, nil
-	default:
-		return 0, fmt.Errorf("invalid status (todo, in-progress, done)")
+	for _, name := range statusName {
+		if name == status {
+			return true
+		}
 	}
+
+	return false
 }
 
 func (t Task) String() string {
@@ -88,11 +86,22 @@ func removeIndex(tasks []Task, index int) []Task {
 	return append(tasks[:index], tasks[index+1:]...)
 }
 
-func getTasks() ([]Task, error) {
+func getTasks(path string) ([]Task, error) {
 	var tasks []Task
+
+	_, err := os.Stat(path)
+
+	if os.IsNotExist(err) {
+		os.Create(path)
+	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading file: %w", err)
+	}
+
+	if len(data) == 0 {
+		return []Task{}, nil
 	}
 
 	if err = json.Unmarshal(data, &tasks); err != nil {
@@ -102,7 +111,7 @@ func getTasks() ([]Task, error) {
 	return tasks, nil
 }
 
-func writeTasks(tasks []Task) error {
+func writeTasks(tasks []Task, path string) error {
 	b, err := json.Marshal(tasks)
 	if err != nil {
 		return fmt.Errorf("encoding tasks: %w", err)
@@ -114,12 +123,8 @@ func writeTasks(tasks []Task) error {
 	return nil
 }
 
-func addTask(description string) error {
+func addTask(description string, tasks []Task) []Task {
 	fmt.Println("➕ Adding a new task")
-	tasks, err := getTasks()
-	if err != nil {
-		return fmt.Errorf("reading existing tasks: %w", err)
-	}
 	newId := 1
 	if len(tasks) > 0 {
 		newId = tasks[len(tasks)-1].ID + 1
@@ -132,22 +137,11 @@ func addTask(description string) error {
 		UpdatedAt:   time.Now(),
 	}
 	tasks = append(tasks, newTask)
-
-	if err = writeTasks(tasks); err != nil {
-		return fmt.Errorf("writing task: %w", err)
-	}
-
-	fmt.Printf("✅ Task added succesfully (ID: %d)", newTask.ID)
-	return nil
+	return tasks
 }
 
-func deleteTask(id int) error {
+func deleteTask(id int, tasks []Task) ([]Task, error) {
 	fmt.Println("🗑️ Deleting a task")
-	tasks, err := getTasks()
-
-	if err != nil {
-		return fmt.Errorf("reading existing tasks: %w", err)
-	}
 
 	found := false
 
@@ -160,48 +154,32 @@ func deleteTask(id int) error {
 	}
 
 	if !found {
-		return fmt.Errorf("task %d not found", id)
+		return nil, fmt.Errorf("task %d not found", id)
 	}
 
-	if err = writeTasks(tasks); err != nil {
-		return fmt.Errorf("writing task: %w", err)
-	}
+	return tasks, nil
+}
 
-	fmt.Printf("✅ Task deleted succesfully (ID: %d)", id)
+func listTasks(w io.Writer, tasks []Task) error {
+	fmt.Fprintln(w, "🗒️ Listing tasks")
+	fmt.Fprintln(w, tasks)
+	fmt.Fprintf(w, "You have %d tasks in your list.", len(tasks))
 	return nil
 }
 
-func listTasks() error {
-	fmt.Println("🗒️ Listing tasks")
-	tasks, err := getTasks()
-	if err != nil {
-		return fmt.Errorf("reading existing tasks: %w", err)
-	}
-	_, err = fmt.Println(tasks)
-	fmt.Printf("You have %d tasks in your list!", len(tasks))
-	return err
-}
-
-func listTasksBy(status TaskStatus) error {
-	fmt.Printf("🗒️ Listing tasks by %s", status)
-	tasks, err := getTasks()
-	if err != nil {
-		return fmt.Errorf("reading existing tasks: %w", err)
-	}
+func listTasksBy(w io.Writer, status TaskStatus, tasks []Task) error {
+	fmt.Fprintf(w, "🗒️ Listing tasks by %s", status)
 	for _, t := range tasks {
 		if t.Status == status {
-			fmt.Println(t)
+			fmt.Fprint(w, t)
 		}
 	}
 	return nil
 }
 
-func updateTaskDescription(id int, description string) error {
+func updateTaskDescription(id int, description string, tasks []Task) ([]Task, error) {
 	fmt.Println("🔄 Updating task")
-	tasks, err := getTasks()
-	if err != nil {
-		return fmt.Errorf("reading existing tasks: %w", err)
-	}
+
 	found := false
 
 	for i, t := range tasks {
@@ -213,22 +191,15 @@ func updateTaskDescription(id int, description string) error {
 	}
 
 	if !found {
-		return fmt.Errorf("task %d not found", id)
+		return nil, fmt.Errorf("task %d not found", id)
 	}
 
-	if err = writeTasks(tasks); err != nil {
-		return fmt.Errorf("writing tasks %w", err)
-	}
-	fmt.Printf("✅ Task updated succesfully (ID: %d)", id)
-	return nil
+	return tasks, nil
 }
 
-func updateTaskStatus(id int, status TaskStatus) error {
+func updateTaskStatus(id int, status TaskStatus, tasks []Task) ([]Task, error) {
 	fmt.Println("🔄 Updating task")
-	tasks, err := getTasks()
-	if err != nil {
-		return fmt.Errorf("reading existing tasks: %w", err)
-	}
+
 	found := false
 
 	for i, t := range tasks {
@@ -240,37 +211,37 @@ func updateTaskStatus(id int, status TaskStatus) error {
 	}
 
 	if !found {
-		return fmt.Errorf("task %d not found", id)
+		return nil, fmt.Errorf("task %d not found", id)
 	}
 
-	if err = writeTasks(tasks); err != nil {
-		return fmt.Errorf("writing tasks %w", err)
-	}
-	fmt.Printf("✅ Task updated succesfully (ID: %d)", id)
-	return nil
+	return tasks, nil
 }
 
-func executeCommand(command string, args []string) error {
+func executeCommand(command string, args []string, path string) error {
 	switch command {
 	case "list":
-		if len(args) > 1 {
-			return fmt.Errorf("❌ Invalid quantity of arguments: %d\nlist have 0 or 1 argument\n", len(args))
-		}
 		if len(args) == 0 {
-			if err := listTasks(); err != nil {
+			tasks, err := getTasks(path)
+			if err != nil {
 				return fmt.Errorf("😭 List command has failed: %w", err)
 			}
-		} else {
+			if err := listTasks(os.Stdout, tasks); err != nil {
+				return fmt.Errorf("😭 List command has failed: %w", err)
+			}
+		} else if len(args) == 1 {
 			if !isStatus(args[0]) {
 				return fmt.Errorf("😭 List command has failed: %s is not a valid status (todo, in-progress, done)", args[0])
 			}
-			status, err := getStatus(args[0])
+			tasks, err := getTasks(path)
 			if err != nil {
-				return fmt.Errorf("😭 List command has failed: %s is not a valid status (todo, in-progress, done)", args[0])
-			}
-			if err = listTasksBy(status); err != nil {
 				return fmt.Errorf("😭 List command has failed: %w", err)
 			}
+			status := statusKey[args[0]]
+			if err = listTasksBy(os.Stdout, status, tasks); err != nil {
+				return fmt.Errorf("😭 List command has failed: %w", err)
+			}
+		} else {
+			return fmt.Errorf("❌ Invalid quantity of arguments: %d\nlist have 0 or 1 argument\n", len(args))
 		}
 		return nil
 	case "add":
@@ -278,9 +249,16 @@ func executeCommand(command string, args []string) error {
 			return fmt.Errorf("❌ Invalid quantity of arguments: %d\nadd needs a description\n", len(args))
 		}
 		description := args[0]
-		if err := addTask(description); err != nil {
+		tasks, err := getTasks(path)
+		if err != nil {
 			return fmt.Errorf("😭 Add command has failed: %w", err)
 		}
+		tasks = addTask(description, tasks)
+		if err = writeTasks(tasks, path); err != nil {
+			return fmt.Errorf("writing task: %w", err)
+		}
+		fmt.Printf("✅ Task added succesfully (ID: %d)", tasks[len(tasks)-1].ID)
+
 		return nil
 	case "update":
 		if len(args) != 2 {
@@ -288,36 +266,76 @@ func executeCommand(command string, args []string) error {
 		}
 		id, _ := strconv.Atoi(args[0])
 		description := args[1]
-		if err := updateTaskDescription(id, description); err != nil {
-			return fmt.Errorf("😭 Add command has failed: %w", err)
+		tasks, err := getTasks(path)
+		if err != nil {
+			return fmt.Errorf("😭 Update command has failed: %w", err)
 		}
+		tasks, err = updateTaskDescription(id, description, tasks)
+		if err != nil {
+			return fmt.Errorf("😭 Update command has failed: %w", err)
+		}
+		if err = writeTasks(tasks, path); err != nil {
+			return fmt.Errorf("😭 Update command has failed: %w", err)
+		}
+		fmt.Printf("✅ Task updated succesfully (ID: %d)", id)
 		return nil
 	case "delete":
 		if len(args) != 1 {
 			return fmt.Errorf("❌ Invalid quantity of arguments: %d\ndelete needs an ID\n", len(args))
 		}
 		id, _ := strconv.Atoi(args[0])
-		if err := deleteTask(id); err != nil {
+		tasks, err := getTasks(path)
+		if err != nil {
 			return fmt.Errorf("😭 Delete command has failed: %w", err)
 		}
+
+		tasks, err = deleteTask(id, tasks)
+		if err != nil {
+			return fmt.Errorf("😭 Delete command has failed: %w", err)
+		}
+
+		if err = writeTasks(tasks, path); err != nil {
+			return fmt.Errorf("😭 Delete command has failed: %w", err)
+		}
+		fmt.Printf("✅ Task deleted succesfully (ID: %d)", id)
 		return nil
+
 	case "mark-in-progress":
 		if len(args) != 1 {
 			return fmt.Errorf("❌ Invalid quantity of arguments: %d\nmark-in-progress needs an id\n", len(args))
 		}
 		id, _ := strconv.Atoi(args[0])
-		if err := updateTaskStatus(id, 1); err != nil {
+		tasks, err := getTasks(path)
+		if err != nil {
+			return fmt.Errorf("😭 Delete command has failed: %w", err)
+		}
+
+		tasks, err = updateTaskStatus(id, 1, tasks)
+		if err != nil {
 			return fmt.Errorf("😭 mark-in-progress command has failed: %w", err)
 		}
+
+		if err = writeTasks(tasks, path); err != nil {
+			return fmt.Errorf("😭 Delete command has failed: %w", err)
+		}
+		fmt.Printf("✅ Task status updated succesfully (ID: %d)", id)
 		return nil
+
 	case "mark-done":
 		if len(args) != 1 {
 			return fmt.Errorf("❌ Invalid quantity of arguments: %d\nmark-done needs an id\n", len(args))
 		}
 		id, _ := strconv.Atoi(args[0])
-		if err := updateTaskStatus(id, 2); err != nil {
+		tasks, err := getTasks(path)
+		if err != nil {
+			return fmt.Errorf("😭 Delete command has failed: %w", err)
+		}
+
+		tasks, err = updateTaskStatus(id, 2, tasks)
+		if err != nil {
 			return fmt.Errorf("😭 mark-done command has failed: %w", err)
 		}
+		fmt.Printf("✅ Task status updated succesfully (ID: %d)", id)
 		return nil
 	default:
 		return fmt.Errorf("❌ Invalid command: %s\n%s\n", command, usage)
@@ -328,7 +346,8 @@ func main() {
 	flag.Parse()
 	command := flag.Arg(0)
 	args := flag.Args()[1:]
-	err := executeCommand(command, args)
+	path := filepath.Join(os.TempDir(), "tasks.json")
+	err := executeCommand(command, args, path)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
