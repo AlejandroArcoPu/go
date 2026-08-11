@@ -1,6 +1,6 @@
 # Task Tracker
 
-Simple CLI app to track your tasks and manage your to-do list. Inspired by [projects](https://roadmap.sh/projects/task-tracker) section in roadmap.sh.
+Simple CLI app to track your tasks and manage your to-do list. Inspired by https://roadmap.sh/projects/task-tracker section in roadmap.sh.
 
 ## Features
 
