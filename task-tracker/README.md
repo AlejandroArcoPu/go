@@ -18,6 +18,28 @@ Simple CLI app to track your tasks and manage your to-do list. Inspired by [proj
 
 - Go version `1.26`
 
+## Installation
+
+- Clone
+
+```bash
+git clone https://github.com/AlejandroArcoPu/go.git
+cd task-tracker
+```
+
+- Build it
+
+```bash
+go build .
+sudo mv ./task-traker /usr/local/bin/task-tracker
+```
+
+- Use it
+
+```bash
+task-tracker add "Buy milk"
+```
+
 ## Usage
 
 - Add a task
