@@ -86,7 +86,7 @@ func removeIndex(tasks []Task, index int) []Task {
 	return append(tasks[:index], tasks[index+1:]...)
 }
 
-func getTasks(path string) ([]Task, error) {
+func readTasks(path string) ([]Task, error) {
 	var tasks []Task
 
 	_, err := os.Stat(path)
@@ -124,7 +124,6 @@ func writeTasks(tasks []Task, path string) error {
 }
 
 func addTask(description string, tasks []Task) []Task {
-	fmt.Println("➕ Adding a new task")
 	newId := 1
 	if len(tasks) > 0 {
 		newId = tasks[len(tasks)-1].ID + 1
@@ -141,8 +140,6 @@ func addTask(description string, tasks []Task) []Task {
 }
 
 func deleteTask(id int, tasks []Task) ([]Task, error) {
-	fmt.Println("🗑️ Deleting a task")
-
 	found := false
 
 	for i, task := range tasks {
@@ -178,8 +175,6 @@ func listTasksBy(w io.Writer, status TaskStatus, tasks []Task) error {
 }
 
 func updateTaskDescription(id int, description string, tasks []Task) ([]Task, error) {
-	fmt.Println("🔄 Updating task")
-
 	found := false
 
 	for i, t := range tasks {
@@ -198,8 +193,6 @@ func updateTaskDescription(id int, description string, tasks []Task) ([]Task, er
 }
 
 func updateTaskStatus(id int, status TaskStatus, tasks []Task) ([]Task, error) {
-	fmt.Println("🔄 Updating task")
-
 	found := false
 
 	for i, t := range tasks {
@@ -221,7 +214,7 @@ func executeCommand(command string, args []string, path string) error {
 	switch command {
 	case "list":
 		if len(args) == 0 {
-			tasks, err := getTasks(path)
+			tasks, err := readTasks(path)
 			if err != nil {
 				return fmt.Errorf("😭 List command has failed: %w", err)
 			}
@@ -232,7 +225,7 @@ func executeCommand(command string, args []string, path string) error {
 			if !isStatus(args[0]) {
 				return fmt.Errorf("😭 List command has failed: %s is not a valid status (todo, in-progress, done)", args[0])
 			}
-			tasks, err := getTasks(path)
+			tasks, err := readTasks(path)
 			if err != nil {
 				return fmt.Errorf("😭 List command has failed: %w", err)
 			}
@@ -248,8 +241,9 @@ func executeCommand(command string, args []string, path string) error {
 		if len(args) != 1 {
 			return fmt.Errorf("❌ Invalid quantity of arguments: %d\nadd needs a description\n", len(args))
 		}
+		fmt.Println("➕ Adding a new task")
 		description := args[0]
-		tasks, err := getTasks(path)
+		tasks, err := readTasks(path)
 		if err != nil {
 			return fmt.Errorf("😭 Add command has failed: %w", err)
 		}
@@ -264,9 +258,10 @@ func executeCommand(command string, args []string, path string) error {
 		if len(args) != 2 {
 			return fmt.Errorf("❌ Invalid quantity of arguments: %d\nupdate needs an ID and a new description\n", len(args))
 		}
+		fmt.Println("🔄 Updating task")
 		id, _ := strconv.Atoi(args[0])
 		description := args[1]
-		tasks, err := getTasks(path)
+		tasks, err := readTasks(path)
 		if err != nil {
 			return fmt.Errorf("😭 Update command has failed: %w", err)
 		}
@@ -283,8 +278,9 @@ func executeCommand(command string, args []string, path string) error {
 		if len(args) != 1 {
 			return fmt.Errorf("❌ Invalid quantity of arguments: %d\ndelete needs an ID\n", len(args))
 		}
+		fmt.Println("🗑️ Deleting a task")
 		id, _ := strconv.Atoi(args[0])
-		tasks, err := getTasks(path)
+		tasks, err := readTasks(path)
 		if err != nil {
 			return fmt.Errorf("😭 Delete command has failed: %w", err)
 		}
@@ -304,8 +300,9 @@ func executeCommand(command string, args []string, path string) error {
 		if len(args) != 1 {
 			return fmt.Errorf("❌ Invalid quantity of arguments: %d\nmark-in-progress needs an id\n", len(args))
 		}
+		fmt.Println("🔄 Updating task")
 		id, _ := strconv.Atoi(args[0])
-		tasks, err := getTasks(path)
+		tasks, err := readTasks(path)
 		if err != nil {
 			return fmt.Errorf("😭 Delete command has failed: %w", err)
 		}
@@ -325,8 +322,9 @@ func executeCommand(command string, args []string, path string) error {
 		if len(args) != 1 {
 			return fmt.Errorf("❌ Invalid quantity of arguments: %d\nmark-done needs an id\n", len(args))
 		}
+		fmt.Println("🔄 Updating task")
 		id, _ := strconv.Atoi(args[0])
-		tasks, err := getTasks(path)
+		tasks, err := readTasks(path)
 		if err != nil {
 			return fmt.Errorf("😭 Delete command has failed: %w", err)
 		}

@@ -2,6 +2,9 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -69,6 +72,19 @@ func TestUpdateDescription(t *testing.T) {
 	}
 }
 
+func TestUpdateTaskDescriptionNotFound(t *testing.T) {
+	tasks := []Task{
+		{ID: 1, Description: "Hanging out", Status: 1, CreatedAt: time.Time{}, UpdatedAt: time.Time{}},
+	}
+
+	tasks, err := updateTaskDescription(2, "Buy milk", tasks)
+
+	if err == nil {
+		t.Errorf("updateTaskDescription() hasn't failed and it's expected a not found error")
+	}
+
+}
+
 func TestUpdateStatus(t *testing.T) {
 	tests := []struct {
 		task      Task
@@ -93,6 +109,18 @@ func TestUpdateStatus(t *testing.T) {
 		if test.task.UpdateStatus(test.newStatus); test.task.Status != test.newStatus {
 			t.Errorf("The new status: %s is not on Task properties", test.newStatus)
 		}
+	}
+}
+
+func TestUpdateTaskStatusNotFound(t *testing.T) {
+	tasks := []Task{
+		{ID: 1, Description: "Hanging out", Status: 0, CreatedAt: time.Time{}, UpdatedAt: time.Time{}},
+	}
+
+	tasks, err := updateTaskStatus(2, 1, tasks)
+
+	if err == nil {
+		t.Errorf("updateTaskStatus() hasn't failed and it's expected a not found error")
 	}
 }
 
@@ -169,5 +197,87 @@ func TestAddTask(t *testing.T) {
 
 	if tasks[1].ID != 2 {
 		t.Errorf("addTask() last item have ID %d, but expected: 2", tasks[1].ID)
+	}
+}
+
+func TestDeleteTask(t *testing.T) {
+	tasks := []Task{
+		{ID: 1, Description: "Hanging out", Status: 1, CreatedAt: time.Time{}, UpdatedAt: time.Time{}},
+		{ID: 2, Description: "Buy milk", Status: 0, CreatedAt: time.Time{}, UpdatedAt: time.Time{}},
+	}
+
+	tasks, err := deleteTask(2, tasks)
+
+	if err != nil {
+		t.Errorf("deleteTask() has failed")
+	}
+
+	if len(tasks) != 1 {
+		t.Errorf("length of tasks after deleteTask() = got %d, but expected: 1", len(tasks))
+	}
+
+	if tasks[0].ID != 1 {
+		t.Errorf("deleteTask() unique item have ID %d, but expected: 1", tasks[1].ID)
+	}
+}
+
+func TestWriteTasks(t *testing.T) {
+	tasks := []Task{
+		{ID: 1, Description: "Hanging out", Status: 1, CreatedAt: time.Time{}, UpdatedAt: time.Time{}},
+		{ID: 2, Description: "Buy milk", Status: 0, CreatedAt: time.Time{}, UpdatedAt: time.Time{}},
+	}
+	path := filepath.Join(os.TempDir(), "tasks-write-test.json")
+
+	if err := writeTasks(tasks, path); err != nil {
+		t.Errorf("writeTasks() has failed: %q", err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Errorf("os.Readfile() has failed: %q", err)
+	}
+
+	if len(data) == 0 {
+		t.Errorf("length of data written by writeTasks() got: %d, but expected greater than 0", len(data))
+	}
+	var got []Task
+
+	if err = json.Unmarshal(data, &got); err != nil {
+		t.Errorf("json.Unmarshal() has failed: %q", err)
+	}
+
+	if len(tasks) != len(got) {
+		t.Errorf("writeTasks() got %d , but expected: %d", len(got), len(tasks))
+	}
+}
+
+func TestReadTask(t *testing.T) {
+	data := []Task{
+		{ID: 1, Description: "Hanging out", Status: 1, CreatedAt: time.Time{}, UpdatedAt: time.Time{}},
+		{ID: 2, Description: "Buy milk", Status: 0, CreatedAt: time.Time{}, UpdatedAt: time.Time{}},
+	}
+	path := filepath.Join(os.TempDir(), "tasks-read-test.json")
+	b, err := json.Marshal(data)
+
+	if err != nil {
+		t.Errorf("json.Marshal() has failed: %q", err)
+	}
+
+	if err = os.WriteFile(path, b, 0644); err != nil {
+		t.Errorf("os.WriteFile() has failed: %q", err)
+	}
+
+	tasks, err := readTasks(path)
+
+	if err != nil {
+		t.Errorf("readTasks() has failed: %q", err)
+	}
+
+	if len(data) != len(tasks) {
+		t.Errorf("length of readTasks() got: %d, but it's expected to be the same as the original", len(tasks))
+	}
+
+	if tasks[0].Description != "Hanging out" {
+		t.Errorf("readTasks() first element got: %s description, expected Hanging out", tasks[0].Description)
 	}
 }
