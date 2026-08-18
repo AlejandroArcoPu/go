@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"errors"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -410,9 +412,10 @@ You have 1 tasks done.`
 		want := `ID: 1, Description: Buy Milk, Status: in_progress
 
 You have 1 tasks in_progress.`
-		tasks.ListBy(&buffer, In_Progress)
+		err := tasks.ListBy(&buffer, In_Progress)
 		got := buffer.String()
 
+		assertError(t, err, nil)
 		assertStrings(t, got, want)
 	})
 	t.Run("invalid status", func(t *testing.T) {
@@ -426,6 +429,13 @@ You have 1 tasks in_progress.`
 
 		assertError(t, got, ErrStatusNotFound)
 	})
+}
+
+func TestReadTasks(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "test-tasks.json")
+
+	tasks, err := ReadTasks(path)
+
 }
 
 func assertError(t testing.TB, got, want error) {
