@@ -1,6 +1,6 @@
 # Task Tracker
 
-Simple CLI app to track your tasks and manage your to-do list. Inspired by [projects](https://roadmap.sh/projects/task-tracker) section in roadmap.sh.
+Simple CLI app to track your tasks and manage your to-do list. Inspired by [projects](https://roadmap.sh/projects/task-tracker) section in roadmap.sh. Developed using **TDD**.
 
 ## Features
 
@@ -45,43 +45,43 @@ task-tracker add "Buy milk"
 - Add a task
 
 ```bash
-task-cli add "Buy milk"
+task-tracker add "Buy milk"
 ```
 
 - Update a task
 
 ```bash
-task-cli update 1 "Buy milk and cook dinner"
+task-tracker update 1 "Buy milk and cook dinner"
 ```
 
 - Delete a task
 
 ```bash
-task-cli delete 1
+task-tracker delete 1
 ```
 
 - List all tasks
 
 ```bash
-task-cli list
+task-tracker list
 ```
 
 - List tasks by status
 
 ```bash
-task-cli list done
-task-cli list todo
-task-cli list in-progress
+task-tracker list done
+task-tracker list todo
+task-tracker list in-progress
 ```
 
 - Mark a task as done
 
 ```bash
-task-cli mark-done 1
+task-tracker mark-done 1
 ```
 
 - Mark a task as in-progress
 
 ```bash
-task-cli mark-in-progress 1
+task-tracker mark-in-progress 1
 ```
