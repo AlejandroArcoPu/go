@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"errors"
-	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -429,13 +427,6 @@ You have 1 tasks in_progress.`
 
 		assertError(t, got, ErrStatusNotFound)
 	})
-}
-
-func TestReadTasks(t *testing.T) {
-	path := filepath.Join(os.TempDir(), "test-tasks.json")
-
-	tasks, err := ReadTasks(path)
-
 }
 
 func assertError(t testing.TB, got, want error) {
