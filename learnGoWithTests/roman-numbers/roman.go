@@ -5,7 +5,7 @@ import (
 )
 
 type Roman struct {
-	Value  int
+	Value  uint16
 	Symbol string
 }
 
@@ -25,7 +25,7 @@ var allRomanNumerals = []Roman{
 	{1, "I"},
 }
 
-func ConvertToRoman(arabic int) string {
+func ConvertToRoman(arabic uint16) string {
 	var result strings.Builder
 
 	for _, numeral := range allRomanNumerals {
@@ -37,8 +37,8 @@ func ConvertToRoman(arabic int) string {
 	return result.String()
 }
 
-func ConvertToArabic(roman string) int {
-	var arabic int
+func ConvertToArabic(roman string) uint16 {
+	var arabic uint16
 
 	for _, numeral := range allRomanNumerals {
 		for strings.HasPrefix(roman, numeral.Symbol) {
@@ -47,4 +47,25 @@ func ConvertToArabic(roman string) int {
 		}
 	}
 	return arabic
+}
+
+func HasMoreThan3ConsecutivesSymbols(roman string) bool {
+	var (
+		counter int
+		letter  string
+	)
+	for _, c := range roman {
+		if string(c) != letter {
+			letter = string(c)
+			counter = 1
+		} else {
+			counter++
+		}
+
+		if counter == 4 {
+			return true
+		}
+	}
+
+	return false
 }

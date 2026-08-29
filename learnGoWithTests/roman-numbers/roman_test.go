@@ -7,7 +7,7 @@ import (
 )
 
 var cases = []struct {
-	Arabic int
+	Arabic uint16
 	Roman  string
 }{
 	{Arabic: 1, Roman: "I"},
@@ -54,7 +54,7 @@ func TestRomanNumerals(t *testing.T) {
 }
 
 func TestConvertingToArabic(t *testing.T) {
-	for _, test := range cases[:3] {
+	for _, test := range cases {
 		t.Run(fmt.Sprintf("%q gets converted to %d", test.Roman, test.Arabic), func(t *testing.T) {
 			got := ConvertToArabic(test.Roman)
 			if got != test.Arabic {
@@ -64,14 +64,86 @@ func TestConvertingToArabic(t *testing.T) {
 	}
 }
 
-func TestProperitesOfConversion(t *testing.T) {
-	assertion := func(arabic int) bool {
-		roman := ConvertToRoman(arabic)
-		fromRoman := ConvertToArabic(roman)
-		return arabic == fromRoman
+func TestPropertiesOfConversion(t *testing.T) {
+
+	t.Run("converting in both sides should return the original number", func(t *testing.T) {
+		assertion := func(arabic uint16) bool {
+			if arabic > 3999 {
+				return true
+			}
+			t.Log("testing", arabic)
+			roman := ConvertToRoman(arabic)
+			fromRoman := ConvertToArabic(roman)
+			return arabic == fromRoman
+		}
+
+		if err := quick.Check(assertion, nil); err != nil {
+			t.Error("failed checks", err)
+		}
+	})
+
+	t.Run("can't have more than 3 consecutives symbols", func(t *testing.T) {
+
+		assertion := func(arabic uint16) bool {
+			if arabic > 3999 {
+				return true
+			}
+			roman := ConvertToRoman(arabic)
+			t.Log("testing", arabic, roman)
+			return HasMoreThan3ConsecutivesSymbols(roman) == false
+		}
+
+		if err := quick.Check(assertion, nil); err != nil {
+			t.Error("failed checks", err)
+		}
+	})
+
+}
+
+func TestHasMoreThan3ConsecutivesSymbols(t *testing.T) {
+	cases := []struct {
+		Roman string
+		Want  bool
+	}{
+		{"III", false},
+		{"XCIX", false},
+		{"IIII", true},  // not valid roman
+		{"VVVVX", true}, // not valid roman
+		{"IX", false},
+		{"MCDLXXVIII", false},
+		{"MCCCXCII", false},
 	}
 
-	if err := quick.Check(assertion, nil); err != nil {
-		t.Error("failed checks", err)
+	for _, test := range cases {
+		description := test.Roman + "check if more than 3 consecutives"
+		t.Run(description, func(t *testing.T) {
+			got := HasMoreThan3ConsecutivesSymbols(test.Roman)
+			if got != test.Want {
+				t.Errorf("got %v, want %v", got, test.Want)
+			}
+		})
 	}
 }
+
+// func TestHasWrongSubstractors(t *testing.T) {
+// 	cases := []struct {
+// 		Roman string
+// 		Want  bool
+// 	}{
+// 		{"X", false},
+// 		{"VX", true},
+// 		{"IX", false},
+// 		{"CXI", false},
+// 		{"XDI", true}, // not valid roman
+// 	}
+
+// 	for _, test := range cases {
+// 		description := test.Roman + "check if wrong subsctractors"
+// 		t.Run(description, func(t *testing.T) {
+// 			got := HasWrongSubstractors(test.Roman)
+// 			if got != test.Want {
+// 				t.Errorf("got %v, want %v", got, test.Want)
+// 			}
+// 		})
+// 	}
+// }
