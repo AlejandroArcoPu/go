@@ -20,6 +20,10 @@ const (
 	tagsSeparator        = "Tags: "
 )
 
+func (p Post) String() string {
+	return fmt.Sprintf("Title: %s\nDescription: %s\nTags: %v\nBody: %s \n", p.Title, p.Description, p.Tags, p.Body)
+}
+
 func newPost(postFile io.Reader) (Post, error) {
 	scanner := bufio.NewScanner(postFile)
 
