@@ -7,4 +7,5 @@ require github.com/approvals/go-approval-tests v1.14.0
 require (
 	github.com/gomarkdown/markdown v0.0.0-20260824154242-13c5cf49db8d // indirect
 	github.com/gomarkdown/mdtohtml v0.0.0-20240124153210-d773061d1585 // indirect
+	github.com/lib/pq v1.12.3 // indirect
 )
