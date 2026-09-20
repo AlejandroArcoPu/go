@@ -158,20 +158,4 @@
     display: none !important;
   }
 }
-@layer utilities {
-  .block {
-    display: block;
-  }
-  .inline {
-    display: inline;
-  }
-  .table {
-    display: table;
-  }
-  .grow {
-    flex-grow: 1;
-  }
-  .resize {
-    resize: both;
-  }
-}
+@layer utilities;

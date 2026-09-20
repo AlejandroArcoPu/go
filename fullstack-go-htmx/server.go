@@ -28,8 +28,10 @@ func NewCarServer(store Store) *CarServer {
 	c.store = store
 
 	server := http.NewServeMux()
-	server.HandleFunc("/cars", http.HandlerFunc(c.carsHandler))
-	server.HandleFunc("/car", http.HandlerFunc(c.carHandler))
+	server.HandleFunc("GET /cars", http.HandlerFunc(c.carsHandler))
+	server.HandleFunc("/car/", http.HandlerFunc(c.carHandler))
+	server.HandleFunc("POST /car", http.HandlerFunc(c.carHandler))
+	server.HandleFunc("DELETE /car", http.HandlerFunc(c.carHandler))
 
 	c.Handler = server
 
@@ -37,10 +39,8 @@ func NewCarServer(store Store) *CarServer {
 }
 
 func (c *CarServer) carsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		w.Header().Add("Content-Type", jsonContentType)
-		json.NewEncoder(w).Encode(c.store.GetCars())
-	}
+	w.Header().Add("Content-Type", jsonContentType)
+	json.NewEncoder(w).Encode(c.store.GetCars())
 }
 
 func (c *CarServer) carHandler(w http.ResponseWriter, r *http.Request) {
@@ -51,6 +51,8 @@ func (c *CarServer) carHandler(w http.ResponseWriter, r *http.Request) {
 		c.showCar(w, vin)
 	case http.MethodPost:
 		c.createCar(w, r)
+	case http.MethodDelete:
+		c.deleteCar(w, vin)
 	}
 
 }
@@ -70,11 +72,18 @@ func (c *CarServer) showCar(w http.ResponseWriter, vin string) {
 func (c *CarServer) createCar(w http.ResponseWriter, r *http.Request) {
 	car := types.Car{}
 	json.NewDecoder(r.Body).Decode(&car)
-	err := c.store.CreateCar(car)
 
+	err := c.store.CreateCar(car)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 	}
-
 	w.WriteHeader(http.StatusCreated)
+}
+
+func (c *CarServer) deleteCar(w http.ResponseWriter, vin string) {
+	err := c.store.DeleteCar(vin)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
